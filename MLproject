@@ -1,0 +1,4 @@
+name: Classification-example
+entry_points:
+  main:
+    command: "python MobilePriceClassification.py"
