@@ -4,6 +4,7 @@ from sklearn.metrics import accuracy_score, confusion_matrix
 from sklearn.ensemble import RandomForestClassifier
 from sklearn import svm, tree
 import xgboost
+import mlflow
 from sklearn.model_selection import train_test_split
 if __name__ == "__main__":
     
@@ -33,3 +34,10 @@ if __name__ == "__main__":
     print("Accuracy is %s"%(acc))
     cm = confusion_matrix(y_test, y_pred)
     print("Confusion Matrix is %s"%(cm))
+    
+   
+    mlflow.set_tracking_uri("http://ilcepoc2353:5000")
+    mlflow.set_experiment("Test")
+    
+    with mlflow.start_run():
+        mlflow.sklearn.log_model(model1,"model1")
