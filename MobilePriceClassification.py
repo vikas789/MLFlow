@@ -37,7 +37,7 @@ if __name__ == "__main__":
     
    
     mlflow.set_tracking_uri("http://ilcepoc2353:5000")
-    mlflow.set_experiment("Test")
+    mlflow.create_experiment("Test")
     
     with mlflow.start_run():
         mlflow.sklearn.log_model(model1,"model1")
