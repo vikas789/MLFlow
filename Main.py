@@ -3,7 +3,7 @@ import numpy as np
 from sklearn.metrics import accuracy_score, confusion_matrix, precision_score, recall_score
 from sklearn.ensemble import RandomForestClassifier
 from sklearn import svm, tree
-import xgboost
+# import xgboost
 import mlflow
 import numpy as np
 import matplotlib.pyplot as plt
@@ -12,6 +12,7 @@ from sklearn import tree
 from sklearn.linear_model import LogisticRegression
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.ensemble import GradientBoostingClassifier
+from mlflow.models.signature import infer_signature
 
 
 
@@ -39,7 +40,7 @@ def model_LogisticRegression():
     return model
 
 def model_KNeighborsClassifier():
-    model = KNeighborsClassifier(n_neighbors=15)
+    model = KNeighborsClassifier(n_neighbors=5, leaf_size=10, n_jobs=1, algorithm='auto')
     return model
 
 def model_GradientBoostingClassifier():
@@ -47,13 +48,13 @@ def model_GradientBoostingClassifier():
     return model
 
 def model_RandomForestClassifier():
-    model=RandomForestClassifier()
+    model=RandomForestClassifier(n_estimators=20, random_state=42)
     return model
 
 
 def training_model(x_train, y_train, model_c):
-    model.fit(x_train, y_train)
-    return model
+    model_c.fit(x_train, y_train)
+    return model_c
 
 
 def predict_test_data(model, x_test):
@@ -79,51 +80,83 @@ def create_confusion_matrix(clf, x_test, y_test):
     plot_confusion_matrix(clf, x_test, y_test)
     plt.savefig('confusion_matrix.png')
 
+def create_signature():
+    from mlflow.models.signature import ModelSignature
+    from mlflow.types.schema import Schema, ColSpec
+    input_schema = Schema([
+    ColSpec("double", "battery_power"),
+    ColSpec("double", "blue"),
+    ColSpec("double", "clock_speed"),
+    ColSpec("double", "dual_sim"),
+    ColSpec("double", "fc"),
+    ColSpec("double", "four_g"),
+    ColSpec("double", "int_memory"),
+    ColSpec("double", "m_dep"),
+    ColSpec("double", "mobile_wt"),
+    ColSpec("double", "n_cores"),
+    ColSpec("double", "pc"),
+    ColSpec("double", "px_height"),
+    ColSpec("double", "px_width"),
+    ColSpec("double", "ram"),
+    ColSpec("double", "sc_h"),
+    ColSpec("double", "sc_w"),
+    ColSpec("double", "talk_time"),
+    ColSpec("double", "three_g"),
+    ColSpec("double", "touch_screen"),
+    ColSpec("double", "wifi"),
+    ])
 
-def create_experiment(experiment_name, run_name, run_metrics, model, confusion_matrix_path=None, run_params=None):
-    mlflow.set_tracking_uri("http://ilcepoc2353:1235")
-    mlflow.set_experiment(experiment_name)
+    output_schema = Schema([ColSpec("long","price_range")])
 
-    with mlflow.start_run():
-        if not run_params == None:
-            for param in run_params:
-                mlflow.log_param(param, run_params[param])
+    return ModelSignature(inputs = input_schema, outputs = output_schema)
+
+
+##def param(model_name):
+    #return {'n_estimators': 5, 'max_depth': 3, 'learning_rate': 0.01}
+
+def create_experiment(experiment_name, run_name, run_metrics, model, model_name, signature, confusion_matrix_path=None, run_p=None):
+   mlflow.set_tracking_uri("http://ilcepoc2353:1235")
+   mlflow.set_experiment(experiment_name)
+   with mlflow.start_run(run_name='Simran'):
+        for param in run_p:
+            mlflow.log_param(param, run_p[param])
         for metric in run_metrics:
             mlflow.log_metric(metric, run_metrics[metric])
-        # mlflow.sklearn.log_model(model, "model")
 
 
-        #if not confusion_matrix_path == None:
-            #mlflow.log_artifact(confusion_matrix_path, 'confusion_matrix')
-        mlflow.set_tag("Model_Name", "SVM")
+        if not confusion_matrix_path == None:
+            mlflow.log_artifact(confusion_matrix_path, 'confusion_matrix')
+        mlflow.set_tag("Model_Name", model_name)
         mlflow.log_artifact("train.csv")
-        mlflow.log_param("lr", 0.01)
-        mlflow.log_param("dropout", 0.25)
-        mlflow.log_param("optimizer", "Adam")
-        mlflow.sklearn.log_model(model,"model")
-    print('Run - %s is logged to experiment - %s' % (run_name, experiment_name))
+        mlflow.sklearn.log_model(model, "model",signature= signature)
+        print('Run - %s is logged to experiment - %s'%(run_name, experiment_name))
 
 
 if __name__ == "__main__":
     data = load_data('train.csv')
     X_train, X_test, Y_train, Y_test = split_into_train_test(data)
 
-    experiment_name = "MLholics"
-    run_name = "Random Forest"
-   
-    model_array=np.array(["LogisticRegression", "KNeighborsClassifier", "GradientBoostingClassifier"])
+    experiment_name = "MLHOLICS"
+    # run_name = "Random Forest"
 
-    for j in model_array:
-        if j == 'LogisticRegression':
-            model=model_LogisticRegression()
-        elif j == "KNeighborsClassifier":
-            model_KNeighborsClassifier()
-        elif j == "GradientBoostingClassifier":
+    model_array = np.array(["KNeighborsClassifier", "GradientBoostingClassifier", "RandomForestClassifier"])
+
+    for model_name in model_array:
+        if model_name == "LogisticRegression":
+            model = model_LogisticRegression()
+        elif model_name == "KNeighborsClassifier":
+            model = model_KNeighborsClassifier()
+        elif model_name == "GradientBoostingClassifier":
             model = model_GradientBoostingClassifier()
-        #elif j == "RandomForestClassifier":
-            #model = model_RandomForestClassifier()
-            
-        print(j)
+        elif model_name == "RandomForestClassifier":
+            model = model_RandomForestClassifier()
+        
+        params = {'RandomForestClassifier':{'n_estimators':10, 'random_state':42 , 'max_depth':1},
+              'KNeighborsClassifier':{'leaf_size':30, 'n_jobs':1, 'n_neighbors':5},
+              'GradientBoostingClassifier':{'n_estimators':5, 'max_depth':3,'learning_rate':0.01},
+              'LogisticRegression':{}
+              }
+
         model = training_model(X_train, Y_train, model)
         Y_pred = predict_test_data(model, X_test)
         Y_pred_proba = predict_prob_test_data(model, X_test)
@@ -131,4 +164,8 @@ if __name__ == "__main__":
         create_confusion_matrix(model, X_test, Y_test)
         run_metrics = get_metrics(Y_test, Y_pred, Y_pred_proba)
         print(run_metrics)
-        create_experiment(experiment_name, run_name, run_metrics, model, 'confusion_matrix.png')
+        signature = create_signature()
+        # infer_signature(X_train, model.predict(X_test))
+        run_name="Simran"
+        create_experiment(experiment_name, run_name, run_metrics, model, model_name, signature,'confusion_matrix.png', params[model_name])
+   
