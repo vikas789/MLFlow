@@ -1,4 +1,6 @@
 name: Classification-example
+docker_env:
+  image: mlflow-docker-image
 entry_points:
   main:
     command: "python Main.py"
