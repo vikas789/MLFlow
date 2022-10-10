@@ -3,7 +3,6 @@ import numpy as np
 from sklearn.metrics import accuracy_score, confusion_matrix, precision_score, recall_score
 from sklearn.ensemble import RandomForestClassifier
 from sklearn import svm, tree
-# import xgboost
 import mlflow
 import numpy as np
 import matplotlib.pyplot as plt
